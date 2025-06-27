@@ -1,0 +1,31 @@
+<programa> ::= <instruccion>*
+
+<instruccion> ::= <declaracion> ":_:"
+                | <asignacion> ":_:"
+                | <instruccion_salida> ":_:"
+                | <instruccion_entrada> ":_:"
+
+<declaracion> ::= <tipo_dato> <lista_declaraciones>
+
+<tipo_dato> ::= "entero" | "decimal" | "caracter" | "cadena" | "booleano"
+
+<lista_declaraciones> ::= <declaracion_simple> ("," <declaracion_simple>)*
+
+<declaracion_simple> ::= IDENTIFICADOR ["=" <expresion>]
+
+<asignacion> ::= IDENTIFICADOR "=" <expresion>
+
+<instruccion_salida> ::= "mt" "<" (<cadena_literal> | <expresion>) ">"
+
+<instruccion_entrada> ::= "inp" "<" IDENTIFICADOR ">"
+
+<expresion> ::= <termino> (("+" | "-") <termino>)*
+
+<termino> ::= <factor> (("*" | "/") <factor>)*
+
+<factor> ::= NUMERO
+           | IDENTIFICADOR
+           | "(" <expresion> ")"
+           | <cadena_literal>
+
+<cadena_literal> ::= "@" (CARACTER)* "@"

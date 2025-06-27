@@ -1,0 +1,13 @@
+entero day:_:
+entero month:_:
+entero year:_:
+decimal total:_:
+total = 56.89 + day + month + year:_:
+mt <@dia@,
+ day,
+ @mes@,
+ month,
+ @año@,
+ year>:_:
+ inp<day>:_:
+ mt<ttal>:_:
