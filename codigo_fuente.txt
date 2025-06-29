@@ -11,3 +11,6 @@ mt <@dia@,
  year>:_:
  inp<day>:_:
  mt<ttal>:_:
+ mt<'x'>:_:
+ booleano flag = true:_:
+ booleano flag = false:_:
