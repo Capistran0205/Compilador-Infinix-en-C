@@ -1,16 +1,8 @@
-entero day:_:
-entero month:_:
-entero year:_:
-decimal total:_:
-total = 56.89 + day + month + year:_:
-mt <@dia@,
- day,
- @mes@,
- month,
- @año@,
- year>:_:
- inp<day>:_:
- mt<ttal>:_:
- mt<'x'>:_:
- booleano flag = true:_:
- booleano flag = false:_:
+entero a = 10, b, c = 0:_:
+c = <a * b> + <a * a / b> - b:_:
+inp< c >:_:
+}
+booleano flag = true:_:
+decimal d = 10.675:_:
+flag = false:_:
+mt<@La operación da como resultado: @, c, @Hola Mundo@>:_:

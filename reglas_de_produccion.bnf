@@ -15,7 +15,11 @@
 
 <asignacion> ::= IDENTIFICADOR "=" <expresion>
 
-<instruccion_salida> ::= "mt" "<" (<cadena_literal> | <expresion>) ">"
+<instruccion_salida> ::= "mt" "<" <lista_elementos_salida> ">"
+
+<lista_elementos_salida> ::= <elemento_salida> ("," <elemento_salida>)*
+
+<elemento_salida> ::= <cadena_literal> | <expresion>
 
 <instruccion_entrada> ::= "inp" "<" IDENTIFICADOR ">"
 
@@ -25,7 +29,8 @@
 
 <factor> ::= NUMERO
            | IDENTIFICADOR
-           | "(" <expresion> ")"
+           | "<" <expresion> ">"
+           | "'" CARACTER "'"
            | <cadena_literal>
 
 <cadena_literal> ::= "@" (CARACTER)* "@"
