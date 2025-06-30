@@ -47,6 +47,16 @@ typedef struct {
     int linea;
 } Token;
 
+typedef enum {
+    TYPE_ENTERO,
+    TYPE_DECIMAL, 
+    TYPE_CARACTER,
+    TYPE_CADENA,
+    TYPE_BOOLEANO,
+    TYPE_UNKNOWN
+} DataType;
+
+
 // Enumeración de tipos de símbolos (tu código original)
 typedef enum {
     INTERNAL_SYMBOL,
@@ -61,6 +71,9 @@ typedef enum {
 typedef struct {
     char name[50];
     SymbolType type;
+    DataType data_type;      // NUEVO: tipo de dato
+    bool is_initialized;     // NUEVO: ¿está inicializada?
+    int scope_level;         // NUEVO: nivel de ámbito
 } SymbolEntry;
 
 // Variables globales
@@ -76,15 +89,15 @@ Token tokens[MAX_TOKENS];
 int token_count = 0;
 int current_token = 0;
 TokenType sync_tokens[] = {
-    TOKEN_FINLINEA,    // :_: (fin de instrucción)
-    TOKEN_ENTERO,      // Inicio de nueva declaración
+    TOKEN_FINLINEA,    // :_: - Siempre seguro
+    TOKEN_ENTERO,      // Inicio de nueva declaración  
     TOKEN_DECIMAL,
     TOKEN_CARACTER,
     TOKEN_CADENA, 
     TOKEN_BOOLEANO,
-    TOKEN_SALIDA,      // mt (nueva instrucción)
-    TOKEN_ENTRADA,     // inp (nueva instrucción)
-    TOKEN_EOF
+    TOKEN_SALIDA,      // mt - Nueva instrucción
+    TOKEN_ENTRADA,     // inp - Nueva instrucción
+    TOKEN_EOF          // Solo EOF, no otros tokens ambiguos
 };
 
 // Variables para el análisis sintáctico
@@ -488,6 +501,7 @@ void agregar_token(const char *lexema, int linea);
 void escribir_contenido_obj(const char *token, SymbolType type);
 bool es_linea_vacia(const char *line);
 void procesar_linea_codigo(const char *line);
+// Función para realizar el análisis léxico
 void analisis_lexico(FILE *source_file);
 void imprimir_tabla_tokens();
 
@@ -497,22 +511,62 @@ void next_token();
 bool match(TokenType expected_type);
 void syntax_error_msg(const char* expected);
 void panic_mode_sync();
+bool is_valid_instruction_start();
+// <programa> ::= <instruccion>*
 bool parse_programa();
+/*<instruccion> ::= <declaracion> ":_:"
+                | <asignacion> ":_:"
+                | <instruccion_salida> ":_:"
+                | <instruccion_entrada> ":_:"*/ 
 bool parse_instruccion();
+// <declaracion> ::= <tipo_dato> <lista_declaraciones>
 bool parse_declaracion();
+// <tipo_dato> ::= "entero" | "decimal" | "caracter" | "cadena" | "booleano"
 bool parse_tipo_dato();
+// <lista_declaraciones> ::= <declaracion_simple> ("," <declaracion_simple>)*
 bool parse_lista_declaraciones();
+// <declaracion_simple> ::= IDENTIFICADOR ["=" <expresion>]
 bool parse_declaracion_simple();
+// <asignacion> ::= IDENTIFICADOR "=" <expresion>
 bool parse_asignacion();
+// <instruccion_salida> ::= "mt" "<" <lista_elementos_salida> ">"
 bool parse_instruccion_salida();
+// <instruccion_entrada> ::= "inp" "<" IDENTIFICADOR ">"
 bool parse_instruccion_entrada();
+// <lista_elementos_salida> ::= <elemento_salida> ("," <elemento_salida>)*
 bool parse_lista_elementos_salida();
+// <elemento_salida> ::= <cadena_literal> | <expresion>
 bool parse_elemento_salida();
+// <expresion> ::= <termino> (("+" | "-") <termino>)*
 bool parse_expresion();
+// <termino> ::= <factor> (("*" | "/") <factor>)*
 bool parse_termino();
+/*<factor> ::= NUMERO
+           | IDENTIFICADOR
+           | "<" <expresion> ">"
+           | "'" CARACTER "'"
+           | <cadena_literal>*/
 bool parse_factor();
+// <cadena_literal> ::= "@" (CARACTER)* "@"
 bool parse_cadena_literal();
+// Función para realizar el análisis sintáctico
 bool analisis_sintactico();
+
+// Funciones del anális semántico
+// Verificar si variable está declarada
+bool verificar_variable_declarada(const char* nombre);
+
+// Verificar compatibilidad de tipos
+bool verificar_compatibilidad_tipos(DataType tipo1, DataType tipo2);
+
+// Verificar asignación
+bool verificar_asignacion(const char* variable, DataType tipo_valor);
+
+// Verificar operación aritmética
+bool verificar_operacion_aritmetica(DataType tipo1, DataType tipo2, char operador);
+
+// Verificar llamada a función (mt, inp)
+bool verificar_instruccion_entrada_salida(TokenType instruccion, DataType* tipos_parametros);
 
 // Funciones de utilidad
 const char* get_token_name(TokenType type);
@@ -587,8 +641,6 @@ void procesar_linea_codigo(const char *line) {
     }
 }
 
-void analisis_lexico(FILE *source_file);
-
 /**
  * Función para realizar el análisis léxico completo
  * @param source_file: Es el código fuente a analizar
@@ -597,17 +649,22 @@ void analisis_lexico(FILE *source_file) {
     char line[MAX_LINE_LENGTH];
     int line_number = 1;
     
+    // Leer línea por línea
     while (fgets(line, sizeof(line), source_file)) {
         char token[MAX_LINE_LENGTH];
         int pos = 0;
         int line_len = strlen(line);
         
+        // Procesar todos los tokens de la línea actual
         while (pos < line_len) {
             // Saltar espacios en blanco
             while (pos < line_len && (line[pos] == ' ' || line[pos] == '\t')) pos++;
-            if (pos >= line_len || line[pos] == '\n') break;
+            
+            // Si llegamos al final de la línea o encontramos salto de línea, salir
+            if (pos >= line_len || line[pos] == '\n' || line[pos] == '\0') break;
             
             int i = 0;
+            int start_pos = pos; // Guardar posición inicial para detectar si no avanzamos
             
             // Manejo del fin de instrucción :_:
             if (pos + 2 < line_len && line[pos] == ':' && line[pos+1] == '_' && line[pos+2] == ':') {
@@ -620,7 +677,7 @@ void analisis_lexico(FILE *source_file) {
             // Manejo de constantes de carácter 'x'
             if (line[pos] == '\'') {
                 token[i++] = line[pos++];
-                if (pos < line_len && line[pos] != '\'') {
+                if (pos < line_len && line[pos] != '\'' && line[pos] != '\n') {
                     token[i++] = line[pos++];
                 }
                 if (pos < line_len && line[pos] == '\'') {
@@ -634,7 +691,7 @@ void analisis_lexico(FILE *source_file) {
             // Manejo de cadenas @texto@
             if (line[pos] == '@') {
                 token[i++] = line[pos++];
-                while (pos < line_len && line[pos] != '@' && line[pos] != '\n') {
+                while (pos < line_len && line[pos] != '@' && line[pos] != '\n' && line[pos] != '\0') {
                     token[i++] = line[pos++];
                 }
                 if (pos < line_len && line[pos] == '@') {
@@ -656,7 +713,8 @@ void analisis_lexico(FILE *source_file) {
             
             // Identificadores, números y palabras reservadas
             while (pos < line_len && line[pos] != ' ' && line[pos] != '\t' && 
-                   line[pos] != '\n' && strchr("=<>+-*/,:@'", line[pos]) == NULL) {
+                   line[pos] != '\n' && line[pos] != '\0' && 
+                   strchr("=<>+-*/,:@'", line[pos]) == NULL) {
                 token[i++] = line[pos++];
             }
             
@@ -664,7 +722,15 @@ void analisis_lexico(FILE *source_file) {
                 token[i] = '\0';
                 agregar_token(token, line_number);
             }
+            
+            // CRÍTICO: Verificar que hemos avanzado en la posición
+            if (pos == start_pos) {
+                // Si no avanzamos, saltar el carácter problemático para evitar bucle infinito
+                pos++;
+            }
         }
+        
+        // IMPORTANTE: Incrementar número de línea después de procesar toda la línea
         line_number++;
     }
 }
@@ -731,9 +797,9 @@ void syntax_error_msg(const char* expected) {
            token->linea, expected, token->lexema);
     
     // También guardar para referencia
-    snprintf(error_message, sizeof(error_message), 
+    /*snprintf(error_message, sizeof(error_message), 
              "Error sintáctico en línea %d: se esperaba %s, se encontró %s", 
-             token->linea, expected, token->lexema);
+             token->linea, expected, token->lexema);*/
 }
 
 /**
@@ -741,30 +807,46 @@ void syntax_error_msg(const char* expected) {
  * Descarta tokens hasta encontrar un punto de sincronización seguro
  */
 void panic_mode_sync() {
-    // printf("Entrando en modo pánico en línea %d...\n", get_current_token()->linea);
+    // printf("Iniciando recuperación de error...\n");
     
-    // Descartar tokens hasta encontrar un punto de sincronización
+    // Consumir tokens hasta encontrar sincronización segura
     while (get_current_token()->type != TOKEN_EOF) {
         TokenType current = get_current_token()->type;
         
-        // Verificar si es un token de sincronización
-        for (int i = 0; i < sizeof(sync_tokens)/sizeof(sync_tokens[0]); i++) {
-            if (current == sync_tokens[i]) {
-                /*printf("Sincronizando en token: %s (línea %d)\n", 
-                       get_current_token()->lexema, get_current_token()->linea);*/
-                return; // Salir del modo pánico
-            }
-        }
-        
-        // Si es :_: (fin de instrucción), consumirlo y salir
+        // Si encontramos :_: (fin de instrucción), lo consumimos y terminamos
         if (current == TOKEN_FINLINEA) {
-            next_token(); // Consumir el :_:
-            printf("Sincronizando después de :_: (línea %d)\n", get_current_token()->linea);
+            next_token(); // CONSUMIR el :_:
+            // printf("Recuperación: Sincronizado después de :_:\n");
             return;
         }
         
-        next_token(); // Descartar token actual
+        // Si encontramos inicio de nueva instrucción, NO lo consumimos
+        if (current == TOKEN_ENTERO || current == TOKEN_DECIMAL ||
+            current == TOKEN_CARACTER || current == TOKEN_CADENA ||
+            current == TOKEN_BOOLEANO || current == TOKEN_SALIDA ||
+            current == TOKEN_ENTRADA) {
+            // printf("Recuperación: Sincronizado en inicio de instrucción\n");
+            return; // NO consumir, dejar para el próximo parse
+        }
+        
+        // Consumir token actual y continuar
+        // printf("Descartando token: %s\n", get_current_token()->lexema);
+        next_token();
     }
+    
+    printf("Recuperación: Alcanzado EOF\n");
+}
+
+/**
+ * Función que se encarga de validar si una instrucción es correcta en el comienzo para el lenguaje
+ * @return true si hay alguna coincidencia y en caso contrario false
+ */
+bool is_valid_instruction_start() {
+    TokenType current = get_current_token()->type;
+    return (current == TOKEN_ENTERO || current == TOKEN_DECIMAL ||
+            current == TOKEN_CARACTER || current == TOKEN_CADENA ||
+            current == TOKEN_BOOLEANO || current == TOKEN_SALIDA ||
+            current == TOKEN_ENTRADA || current == TOKEN_IDENTIFICADOR);
 }
 
 /**
@@ -774,18 +856,33 @@ bool parse_programa() {
     bool has_errors = false;
     
     while (get_current_token()->type != TOKEN_EOF) {
+        // Verificar si estamos en un estado válido para iniciar instrucción
+        TokenType current = get_current_token()->type;
+        
+        if (current != TOKEN_ENTERO && current != TOKEN_DECIMAL &&
+            current != TOKEN_CARACTER && current != TOKEN_CADENA &&
+            current != TOKEN_BOOLEANO && current != TOKEN_SALIDA &&
+            current != TOKEN_ENTRADA && current != TOKEN_IDENTIFICADOR) {
+            
+            // Token inesperado al inicio de instrucción
+            syntax_error_msg("inicio de instrucción válido(declaración de variable, entrada o salida de datos)");
+            panic_mode_sync();
+            has_errors = true;
+            continue;
+        }
+        
+        // Intentar parsear la instrucción
         if (!parse_instruccion()) {
             has_errors = true;
-            // NO retornar false aquí, continuar con la siguiente instrucción
-            
-            // Si ya estamos en EOF después del pánico, salir
+            // El modo pánico ya se ejecutó en parse_instruccion()
+            // Solo continuar si no estamos en EOF (Fin del Archivo)
             if (get_current_token()->type == TOKEN_EOF) {
                 break;
             }
         }
     }
     
-    return !has_errors; // Retornar true solo si no hubo errores
+    return !has_errors;
 }
 
 /**
@@ -796,44 +893,40 @@ bool parse_programa() {
  */
 bool parse_instruccion() {
     Token* token = get_current_token();
+    bool instruction_parsed = false;
     
-    // Verificar qué tipo de instrucción es
+    // Intentar parsear según el tipo de instrucción
     if (token->type == TOKEN_ENTERO || token->type == TOKEN_DECIMAL || 
         token->type == TOKEN_CARACTER || token->type == TOKEN_CADENA || 
         token->type == TOKEN_BOOLEANO) {
-        // Es una declaración
-        if (!parse_declaracion()) {
-            panic_mode_sync(); // Entrar en modo pánico
-            return false; // Pero continuar con el análisis
-        }
+        instruction_parsed = parse_declaracion();
     } else if (token->type == TOKEN_SALIDA) {
-        if (!parse_instruccion_salida()) {
-            panic_mode_sync();
-            return false;
-        }
+        instruction_parsed = parse_instruccion_salida();
     } else if (token->type == TOKEN_ENTRADA) {
-        if (!parse_instruccion_entrada()) {
-            panic_mode_sync();
-            return false;
-        }
+        instruction_parsed = parse_instruccion_entrada();
     } else if (token->type == TOKEN_IDENTIFICADOR) {
-        if (!parse_asignacion()) {
-            panic_mode_sync();
-            return false;
-        }
+        instruction_parsed = parse_asignacion();
     } else {
         syntax_error_msg("declaración, asignación, instrucción de entrada o salida");
-        panic_mode_sync(); // Sincronizar y continuar
+        panic_mode_sync();
         return false;
     }
     
-    // Verificar fin de instrucción
-    if (!match(TOKEN_FINLINEA)) {
+    // Si falló el parsing de la instrucción
+    if (!instruction_parsed) {
+        panic_mode_sync();
+        return false;
+    }
+    
+    // Verificar fin de instrucción (:_:)
+    if (get_current_token()->type != TOKEN_FINLINEA) {
         syntax_error_msg(":_:");
         panic_mode_sync();
         return false;
     }
     
+    // Consumir el :_:
+    next_token();
     return true;
 }
 
@@ -1072,7 +1165,7 @@ bool analisis_sintactico() {
     bool result = parse_programa();
     
     if (syntax_error) {
-        printf("ERROR: %s\n", error_message);
+        // printf("ERROR: %s\n", error_message);
         return false;
     } else if (result) {
         printf("✓ Análisis sintáctico completado exitosamente\n");
@@ -1148,15 +1241,15 @@ int main() {
     bool sintaxis_correcta = analisis_sintactico();
     printf("Análisis sintáctico: %s\n\n", sintaxis_correcta ? "✓ Exitoso" : "✗ Con errores");
     
-    // 8. MOSTRAR TABLAS DE SÍMBOLOS
+    // MOSTRAR TABLAS DE SÍMBOLOS
     printf("Mostrando tablas de símbolos...\n");
     imprimir_tabla_simbolos();
     
-    // 9. CIERRE DE ARCHIVOS
+    // CIERRE DE ARCHIVOS
     fclose(source_file);
     fclose(output_file);
     
-    // 10. MENSAJE FINAL
+    // MENSAJE FINAL
     printf("\n=== PROCESAMIENTO COMPLETADO ===\n");
     printf("- Archivo objeto generado: codigo_objeto.obj\n");
     printf("- Estado: %s\n", sintaxis_correcta ? "✓ EXITOSO" : "✗ CON ERRORES");

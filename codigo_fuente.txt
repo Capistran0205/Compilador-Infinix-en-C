@@ -1,8 +1,9 @@
-entero a = 10, b, c = 0:_:
-c = <a * b> + <a * a / b> - b:_:
-inp< c >:_:
-}
+entero  = 25:_: decimal b = 30.575, c:_:
+c = a * b> + <a * a / b> - b:_:
+cadena mensaje= @Hola@ :_:
+caracter inicial  'D':_:
+inp < c >:_:
 booleano flag = true:_:
 decimal d = 10.675:_:
 flag = false:_:
-mt<@La operación da como resultado: @, c, @Hola Mundo@>:_:
+mt<@ La operación da como resultado: @, c, @ Hola Mundo @>:_:
