@@ -2,6 +2,8 @@
 #include "tabla_simbolos.h"
 #include "lexico.h"
 #include "sintactico.h"
+#include "ast.h"
+#include "parser.h"
 
 int main() {
     printf("=== COMPILADOR INFINIX MODULARIZADO ===\n\n");
@@ -54,6 +56,18 @@ int main() {
     // 4. ANÁLISIS SINTÁCTICO
     printf("\nIniciando análisis sintáctico...\n");
     bool sintaxis_correcta = analisis_sintactico();
+
+    current_token_index = 0;  // Reiniciar índice
+    ASTNode* ast = parse_program_tree();
+
+    if (ast && sintaxis_correcta) {
+        printf("Árbol sintáctico generado exitosamente:\n");
+        print_ast(ast, 0);
+        free_ast(ast);          
+    } else {
+        printf("Error en análisis sintáctico\n");
+        exit(1); 
+    }
     
     // 5. MOSTRAR RESULTADOS
     imprimir_tabla_simbolos();
