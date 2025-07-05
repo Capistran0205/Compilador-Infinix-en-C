@@ -1,36 +1,40 @@
-<programa> ::= <instruccion>*
+programa ::= <instruccion> | <programa> <instruccion>
 
-<instruccion> ::= <declaracion> ":_:"
-                | <asignacion> ":_:"
-                | <instruccion_salida> ":_:"
-                | <instruccion_entrada> ":_:"
+instruccion ::= <declaracion> :_:
+                | <asignacion> :_:
+                | <instruccion_salida> :_:
+                | <instruccion_entrada> :_:
+                
+declaracion ::= <tipo_dato> <lista_declaraciones>
 
-<declaracion> ::= <tipo_dato> <lista_declaraciones>
+tipo_dato ::= entero | decimal | caracter | cadena | booleano
 
-<tipo_dato> ::= "entero" | "decimal" | "caracter" | "cadena" | "booleano"
+lista_declaraciones ::= <declaracion_simple> | <lista_declaraciones>, <declaracion_simple>
 
-<lista_declaraciones> ::= <declaracion_simple> ("," <declaracion_simple>)*
+declaracion_simple> ::= IDENTIFICADOR = <expresion> | IDENTIFICADOR
 
-<declaracion_simple> ::= IDENTIFICADOR ["=" <expresion>]
+asignacion ::= IDENTIFICADOR = <expresion>
 
-<asignacion> ::= IDENTIFICADOR "=" <expresion>
+instruccion_salida ::= mt < <lista_elementos_salida> >
 
-<instruccion_salida> ::= "mt" "<" <lista_elementos_salida> ">"
+lista_elementos_salida ::= <elemento_salida> | <lista_elementos_salida>, <elemento_salida>
 
-<lista_elementos_salida> ::= <elemento_salida> ("," <elemento_salida>)*
+elemento_salida ::= < <expresion> 
 
-<elemento_salida> ::= <cadena_literal> | <expresion>
+instruccion_entrada> ::= inp < IDENTIFICADOR >
 
-<instruccion_entrada> ::= "inp" "<" IDENTIFICADOR ">"
+expresion> ::= <termino> | <termino> + <termino> | <termino> - <termino>
 
-<expresion> ::= <termino> (("+" | "-") <termino>)*
+termino> ::= <factor> | <factor> * <factor> | <factor> / <factor>
 
-<termino> ::= <factor> (("*" | "/") <factor>)*
-
-<factor> ::= NUMERO
+factor ::= NUMERO
            | IDENTIFICADOR
-           | "<" <expresion> ">"
-           | "'" CARACTER "'"
+           | <expresion> 
            | <cadena_literal>
+           | <caracter>
+           | <booleano>
+cadena_literal::= @CARACTERES@ | @ CARACTERES @
 
-<cadena_literal> ::= "@" (CARACTER)* "@"
+booleano ::= true | false
+
+caracter ::= 'CARACTER'

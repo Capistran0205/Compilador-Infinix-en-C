@@ -17,7 +17,7 @@ void set_output_file(FILE *file) {
 const char* get_token_name(TokenType type) {
     switch(type) {
         case TOKEN_IDENTIFICADOR: return "IDENTIFICADOR";
-        case TOKEN_NUMERO: return "NUMERO";
+        case TOKEN_NUMERO: return "CONSTANTE_NUMERO";
         case TOKEN_FINLINEA: return "FINLINEA";
         case TOKEN_ARROBA: return "ARROBA";
         case TOKEN_COMILLA: return "COMILLA";
@@ -192,6 +192,7 @@ TokenType clasificar_token(const char *lexema) {
     if (strcmp(lexema, "<") == 0) return TOKEN_MENOR;
     if (strcmp(lexema, ">") == 0) return TOKEN_MAYOR;
     
+
     // Constantes de carácter ('a')
     if (strlen(lexema) == 3 && lexema[0] == '\'' && lexema[2] == '\'') {
         return TOKEN_CONSTANTE_CHAR;
@@ -266,7 +267,7 @@ int obtener_siguiente_token(const char *line, int pos, char *token) {
     }
 
     // Manejo de operadores de un solo carácter
-    if (strchr("=<>+-*/?:,", line[pos]) != NULL) {
+    if (strchr("=<>+-*/?:@,", line[pos]) != NULL) {
         token[i++] = line[pos++];
         token[i] = '\0';
         return pos;
@@ -337,7 +338,8 @@ void procesar_linea_codigo(const char *line) {
             if (strcmp(token, ",") == 0 || strcmp(token, "=") == 0 ||
                 strcmp(token, "+") == 0 || strcmp(token, "-") == 0 ||
                 strcmp(token, "*") == 0 || strcmp(token, "/") == 0 ||
-                strcmp(token, "<") == 0 || strcmp(token, ">") == 0) {
+                strcmp(token, "<") == 0 || strcmp(token, ">") == 0 ||
+                strcmp(token, "@") == 0) {
                 continue; // Saltar este token duplicado
             }
         }

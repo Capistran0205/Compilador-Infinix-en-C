@@ -298,24 +298,31 @@ bool parse_termino() {
  */
 bool parse_factor() {
     Token* token = get_current_token();
-    
+    // NUMERO
     if (match(TOKEN_NUMERO)) {
         return true;
+    // IDENTIFICADOR
     } else if (match(TOKEN_IDENTIFICADOR)) {
         return true;
-    } else if (match(TOKEN_MENOR)) {
+    // PARÉNTESIS 
+    /*} else if (match(TOKEN_MENOR)) {
         if (!parse_expresion()) return false;
         if (!match(TOKEN_MAYOR)) {
             syntax_error_msg(">");
             return false;
         }
         return true;
-    } else if (match(TOKEN_CONSTANTE_CHAR)) {
+    }*/
+    // CONSTANTE CARÁCTER
+   }else if (match(TOKEN_CONSTANTE_CHAR)) {
         return true;
+    // CONSTANTE CADENA
     } else if (token->type == TOKEN_CONSTANTE_CADENA) {
         return parse_cadena_literal();
+    // CONSTANTE BOOLEANA
     } else if (match(TOKEN_CONSTANTE_BOOL)) {
         return true;
+    // ERROR DE FACTOR
     } else {
         syntax_error_msg("número, identificador, carácter o cadena");
         return false;

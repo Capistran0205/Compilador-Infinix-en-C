@@ -44,7 +44,7 @@ bool is_type_token(TokenType type) {
 
 /**
  * Parsear el programa completo
- * Programa -> Sentencia*
+ * Programa -> Instruccion*
  */
 ASTNode* parse_program_tree() {
     ASTNode* program = create_node(NODE_PROGRAM, "PROGRAM", 1);
@@ -61,7 +61,7 @@ ASTNode* parse_program_tree() {
 
 /**
  * Parsear una sentencia
- * Sentencia -> Declaracion | Asignacion | Entrada | Salida
+ * Instruccion-> Declaracion | Asignacion | Entrada | Salida
  */
 ASTNode* parse_statement_tree() {
     Token token = peek_token();
@@ -95,7 +95,7 @@ ASTNode* parse_statement_tree() {
 
 /**
  * Parsear declaración
- * Declaracion -> Tipo Identificador [= Expresion] :_:
+ * Declaracion -> Tipo Identificador = Expresion :_:
  */
 ASTNode* parse_declaration_tree() {
     Token type_token = consume_token(); // entero, decimal, etc.
@@ -129,8 +129,8 @@ ASTNode* parse_declaration_tree() {
 ASTNode* parse_expression_tree() {
     ASTNode* left = parse_term_tree();
     
-    while (match_token(TOKEN_MAS) || match_token(TOKEN_MENOS) ||
-           match_token(TOKEN_MENOR) || match_token(TOKEN_MAYOR)) {
+    // En caso de ser necesario especificar < >
+    while (match_token(TOKEN_MAS) || match_token(TOKEN_MENOS)) {
         Token op = consume_token();
         ASTNode* right = parse_term_tree();
         left = create_binary_node(NODE_BINARY_OP, left, right);

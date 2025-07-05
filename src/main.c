@@ -48,28 +48,25 @@ int main() {
     // También hacer el análisis léxico para la tabla de tokens (opcional, para debugging)
     rewind(source_file);
     current_line = 1;
-    analisis_lexico(source_file);
-    
-    // Mostrar tabla de tokens (opcional)
-    imprimir_tabla_tokens();
+    analisis_lexico(source_file);    
     
     // 4. ANÁLISIS SINTÁCTICO
     printf("\nIniciando análisis sintáctico...\n");
     bool sintaxis_correcta = analisis_sintactico();
 
     current_token_index = 0;  // Reiniciar índice
-    ASTNode* ast = parse_program_tree();
+    /*ASTNode* ast = parse_program_tree();
 
-    if (ast && sintaxis_correcta) {
+     if (ast && sintaxis_correcta) {
         printf("Árbol sintáctico generado exitosamente:\n");
         print_ast(ast, 0);
         free_ast(ast);          
     } else {
         printf("Error en análisis sintáctico\n");
         exit(1); 
-    }
+    }*/
     
-    // 5. MOSTRAR RESULTADOS
+    // MOSTRAR RESULTADOS
     imprimir_tabla_simbolos();
     
     // 6. CIERRE
